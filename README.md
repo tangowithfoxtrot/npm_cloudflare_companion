@@ -1,7 +1,7 @@
-# npm_cloudflare_companion
-Nginx Proxy Manager Companion that manages proxy hosts and their associated DNS entries
+# Nginx Proxy Manager Cloudflare Companion
+Nginx Proxy Manager companion that manages proxy hosts and their associated DNS entries
 
-## Example config file:
+## Example config file
 `config.yml`
 ```yaml
 host: "https://nginx-proxy-manager.example.com/api"
