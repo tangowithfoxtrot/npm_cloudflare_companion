@@ -40,12 +40,12 @@ get_proxy_hosts() {
   curl -sX 'GET' \
     "$host/$endpoint" \
     -H 'Accept: application/json' \
-    -H "Authorization: Bearer $TOKEN" | jq .[].domain_names | jq -r .[]
+    -H "Authorization: Bearer $TOKEN" | jq -r .[].domain_names.[]
 }
 
 create_proxy_hosts() {
   endpoint="nginx/proxy-hosts"
-  proxy_hosts="$(parse_proxy_hosts)"
+  proxy_hosts="$1"
 
   for proxy_host in $(echo "$proxy_hosts" | jq -c '.[]'); do
     # Send the API request for the current proxy_host
@@ -77,6 +77,48 @@ refresh_token() {
     -H "Authorization: Bearer $TOKEN" | jq -r .token
 }
 
+imperative_create() {
+  mapfile -t existing_hosts < <(get_proxy_hosts)
+  mapfile -t hosts_in_config < <(parse_proxy_hosts | jq -r .[].domain_names.[])
+
+  # if any hosts_in_config are not in existing_hosts, create them
+  for host_in_config in "${hosts_in_config[@]}"; do
+    if [[ ! " ${existing_hosts[*]} " =~ ${host_in_config} ]]; then
+      proxy_host_requests="$(parse_proxy_hosts | jq -c --arg host "${host_in_config}" '.[] | select(.domain_names | contains([$host])) | [.]')"
+      create_proxy_hosts "$proxy_host_requests"
+    fi
+  done
+}
+
+reconcile_hosts() { # checks the state of existing proxy_hosts and creates, edits, or deletes them if they do not match
+  mapfile -t existing_hosts < <(get_proxy_hosts)
+  mapfile -t hosts_in_config < <(parse_proxy_hosts | jq -r .[].domain_names.[])
+
+  # if any hosts_in_config are not in existing_hosts, create them
+  for host_in_config in "${hosts_in_config[@]}"; do
+    if [[ ! " ${existing_hosts[*]} " =~ ${host_in_config} ]]; then
+      proxy_host_requests="$(parse_proxy_hosts | jq -c --arg host "${host_in_config}" '.[] | select(.domain_names | contains([$host])) | [.]')"
+      create_proxy_hosts "$proxy_host_requests"
+    fi
+  done
+
+  # if any existing_hosts are not in hosts_in_config, delete them
+  for existing_host in "${existing_hosts[@]}"; do
+    if [[ ! " ${hosts_in_config[*]} " =~ ${existing_host} ]]; then
+      echo "delete $existing_host"
+    fi
+  done
+
+  # if any existing_hosts are in hosts_in_config, check if they need to be updated
+  for existing_host in "${existing_hosts[@]}"; do
+    if [[ " ${hosts_in_config[*]} " =~ ${existing_host} ]]; then
+      echo "update $existing_host"
+    fi
+  done
+}
+
+
 # shellcheck disable=SC2155
 export TOKEN="$(request_token "$username" "" "$password")"
-create_proxy_hosts
+# imperative_create
+# reconcile_hosts
