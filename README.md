@@ -7,6 +7,8 @@ Nginx Proxy Manager companion that manages proxy hosts and their associated DNS 
 host: "https://nginx-proxy-manager.example.com/api"
 username: "api_user@example.com"
 password: "password" # be careful
+cf_api_token: "cf_api_token" # be careful
+domain_name: "your_domain.whatever" # be careful
 
 proxy_hosts:
   webserver.example.com:
@@ -14,7 +16,7 @@ proxy_hosts:
     forward_host: "webserver"
     forward_port: 8080
     block_exploits: true
-    access_list_id: '0' # npm API expects this to be a string ¯\_(ツ)_/¯
+    access_list_id: '0'
     certificate_id: 3
     ssl_forced: true
     http2_support: true
